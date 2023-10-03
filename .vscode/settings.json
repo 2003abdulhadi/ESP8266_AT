@@ -2,6 +2,7 @@
     "files.associations": {
         "stdbool.h": "c",
         "stm32f4xx_hal_def.h": "c",
-        "stm32f4xx_hal_uart.h": "c"
+        "stm32f4xx_hal_uart.h": "c",
+        "esp8266_at.h": "c"
     }
 }

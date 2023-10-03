@@ -10,29 +10,26 @@
 #ifndef ESP8266_AT_H
 #define ESP8266_AT_H
 
-
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 #include "stm32f4xx_hal_uart.h"
 
-static UART_HandleTypeDef *ESP8266_USART;
+#define _Transmit(uart, str, timeout) HAL_UART_Transmit(&uart, (uint8_t *)strcat(str, "\r\n"), strlen(strcat(str, "\r\n")), timeout)
 
-#define __Transmit(str) (HAL_UART_Transmit(&ESP8266_USART, (uint8_t *)str, strlen(str), 100))
-
-void ESP8266_INIT(UART_HandleTypeDef *usart);
 // basic AT commands
 
 /*
  * @brief Tests AT Startup
  * @returns OK
  */
-void ESP8266_AT();
+void ESP8266_AT(UART_HandleTypeDef *uart, uint8_t timeout);
 
 /*
  * @brief Restarts the Module
  * @returns OK
  */
-void ESP8266_AT_RST();
+void ESP8266_AT_RST(UART_HandleTypeDef *uart, uint8_t timeout);
 
 /*
  * @brief Checks Version Information
@@ -41,7 +38,7 @@ void ESP8266_AT_RST();
  * @returns <compile time>: the duration of time for compiling the BIN,
  * @returns OK
  */
-void ESP8266_AT_GMR();
+void ESP8266_AT_GMR(UART_HandleTypeDef *uart, uint8_t timeout);
 
 /*
  * @brief Enters Deep-sleep Mode. ESP8266 will wake up after
@@ -52,7 +49,7 @@ void ESP8266_AT_GMR();
  * enter the Deep-sleep mode, i.e., connecting XPD_DCDC to
  * EXT_RSTB via a 0-ohm resistor.
  */
-void ESP8266_AT_GSLP(uint8_t time);
+void ESP8266_AT_GSLP(UART_HandleTypeDef *uart, uint8_t time, uint8_t timeout);
 
 /*
  * @brief AT Commands Echoing, This command ATE is used to trigger
@@ -61,7 +58,7 @@ void ESP8266_AT_GSLP(uint8_t time);
  * @param bool, true: Switches echo on, false: switches echo off
  * @returns OK
  */
-void ESP8266_ATE(bool state);
+void ESP8266_ATE(UART_HandleTypeDef *uart, bool echo_on, uint8_t timeout);
 
 /*
  * @brief Restores the Factory Default Settings. The execution of
@@ -70,7 +67,7 @@ void ESP8266_ATE(bool state);
  * restarted when this command is executed.
  * @returns OK
  */
-void ESP8266_RESTORE();
+void ESP8266_RESTORE(UART_HandleTypeDef *uart, uint8_t timeout);
 
 /*
  * @brief Query Current UART Configuration; Not Saved in the
@@ -82,7 +79,7 @@ void ESP8266_RESTORE();
  * @returns +UART_CUR:<baudrate>,<databits>,<stop bits>,<parity>,
  * <flow control>, OK
  */
-void ESP8266_AT_UART_CUR_QUERY();
+void ESP8266_AT_UART_CUR_QUERY(UART_HandleTypeDef *uart, uint8_t timeout);
 
 /*
  * @brief Set Current UART Configuration; Not Saved in the Flash.
@@ -101,16 +98,17 @@ void ESP8266_AT_UART_CUR_QUERY();
  * 3: enable both RTS and CTS
  * @returns OK
  */
-void ESP8266_AT_UART_CUR_SET(uint8_t baudrate, uint8_t databits,
-                             uint8_t stopbits, uint8_t parity,
-                             uint8_t flow_control);
+void ESP8266_AT_UART_CUR_SET(UART_HandleTypeDef *uart, uint8_t baudrate,
+                             uint8_t databits, uint8_t stopbits,
+                             uint8_t parity, uint8_t flow_control,
+                             uint8_t timeout);
 
 /*
  * @brief Query Current UART Configuration; Saved in the Flash.
  * @returns +UART_DEF:<baudrate>,<databits>,<stop bits>,<parity>,
  * <flow control>, OK
  */
-void ESP8266_AT_UART_DEF_QUERY();
+void ESP8266_AT_UART_DEF_QUERY(UART_HandleTypeDef *uart, uint8_t timeout);
 
 /*
  * @brief Set Current UART Configuration; Saved in the Flash.
@@ -130,7 +128,7 @@ void ESP8266_AT_UART_DEF_QUERY();
  * 3: enable both RTS and CTS
  * @returns OK
  */
-void ESP8266_AT_UART_DEF_SET();
+void ESP8266_AT_UART_DEF_SET(UART_HandleTypeDef *uart, uint8_t timeout);
 
 /*
  * @breif Query Sleep Mode. 0: sleep mode disabled. 1; Light-sleep
@@ -138,7 +136,7 @@ void ESP8266_AT_UART_DEF_SET();
  * Station mode.
  * @returns +SLEEP:<sleep mode>, OK
  */
-void ESP8266_AT_SLEEP_QUERY();
+void ESP8266_AT_SLEEP_QUERY(UART_HandleTypeDef *uart, uint8_t timeout);
 
 /*
  * @brief Set Sleep Mode.
@@ -147,7 +145,8 @@ void ESP8266_AT_SLEEP_QUERY();
  * used in Station mode. Modem-sleep is the default sleep mode.
  * @returns OK
  */
-void ESP8266_AT_SLEEP_SET(uint8_t sleep_mode);
+void ESP8266_AT_SLEEP_SET(UART_HandleTypeDef *uart, uint8_t sleep_mode,
+                          uint8_t timeout);
 
 // to be implemented
 
