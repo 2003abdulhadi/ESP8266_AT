@@ -3,6 +3,11 @@
  * Driver for ESP8266 wifi module using AT commands
  * All functions are implemented per v3.0.5 of AT commands found at
  * https://www.espressif.com/sites/default/files/documentation/4a-esp8266_at_instruction_set_en.pdf
+ * All functions have 2 params minimum: uart, and timeout. uart is the
+ * pointer to the uart used to communicate with the ESP8266. Timeout
+ * configures the timeout duration of the transmitted request.
+ * Returns documentation defines the response the ESP8266 will give
+ * based on the command sent
  * This project is maintained at
  * https://github.com/2003abdulhadi/ESP8266_AT
  */
@@ -147,88 +152,238 @@ void ESP8266_AT_SLEEP_QUERY(UART_HandleTypeDef *uart, uint8_t timeout);
  */
 void ESP8266_AT_SLEEP_SET(UART_HandleTypeDef *uart, uint8_t sleep_mode,
                           uint8_t timeout);
+/*
+ * @brief Configures a GPIO to Wake ESP8266 up from Light-sleep Mode
+ * Since the system needs some time to wake up from light sleep, it is
+ * suggested that wait at least 5ms before sending next AT command. The
+ * value of <trigger_GPIO> and <awake_GPIO> in the command should not
+ * be the same. After being woken up by <trigger_GPIO> from Light-sleep,
+ * when the ESP8266 attempts tosleep again, it will check the status of
+ * the <trigger_GPIO>. if it is still in the wakeup status, the EP8266
+ * will enter Modem-sleep mode instead. if it is NOT in the wakeup
+ * status, the ESP8266 will enter Light-sleep mode
+ * @param <enable>. true:  ESP8266 can be woken up from light-sleep by
+ * GPIO. false: ESP8266 can NOT be woken up from light-sleep by GPIO
+ * @param <trigger_gpio>. trigger_gpio :=[0,15]. enable sets the GPIO to
+ * wake the ESP8266
+ * @param <trigger_level>. true: ESP8266 will wake on high. false: ESP8266
+ * will wake on low
+ * @param <awake_GPIO>. OPTIONAL PARAM. awake_gpio := [0,15]. used to set
+ * a GPIO as a flag of ESP8266’s being awoken form Light-sleep
+ * @param <awake_level> OPTIONAL PARAM. true: GPIO is set to high after
+ * wake. false: GPIO is set to low after wake
+ * @returns OK
+ * @note Optional params are nullable
+ */
+void ESP8266_AT_WAKEUPGPIO(UART_HandleTypeDef *uart, bool enable,
+                           uint8_t trigger_gpio, bool trigger_level,
+                           uint8_t awake_GPIO, bool awake_level,
+                           uint8_t timeout);
+/*
+ * @brief Sets the Maximum Value of RF TX Power. This command sets the
+ * maximum value of ESP8266 RF TX power; it is not precise. The actual
+ * value could be smaller than the set value.
+ * @param <TX Power>. Tx power :=[0,82]. Tx power is the maximum value
+ * of RF TX power.
+ * @returns OK
+ */
+void ESP8266_AT_RFPOWER(UART_HandleTypeDef *uart, uint8_t Tx_power, uint8_t timeout);
 
-// to be implemented
+/*
+ * @brief Query RF TX Power According to VDD33. Checks the value of ESP8266
+ * VDD33. The command should only be used when TOUT pin has to be
+ * suspended, or else the returned value would be invalid.
+ * @returns +RFVDD:<VDD33>, OK
+ */
+void ESP8266_AT_RFVDD_QUERY(UART_HandleTypeDef *uart, uint8_t timeout);
 
-// void ESP8266_AT_WAKEUPGPIO();
-// void ESP8266_AT_RFPOWER();
-// void ESP8266_AT_RFVDD();
-// void ESP8266_AT_SYSRAM();
-// void ESP8266_AT_SYSADC();
-// void ESP8266_AT_SYSIOSETCFG();
-// void ESP8266_AT_SYSIOGETCFG();
-// void ESP8266_AT_SYSGPIODIR();
-// void ESP8266_AT_SYSGPIOWRITE();
-// void ESP8266_AT_SYSGPIOREAD();
-// void ESP8266_AT_SYSMSG_CUR();
-// void ESP8266_AT_SYSMSG_DEF();
+/*
+ * @brief Set RF TX Power According to VDD33. Sets the RF TX Power
+ * according to <VDD33>.
+ * @param <VD33>: VD33 := [1900,3300]. power voltage of ESP8266 VDD33
+ * @returns OK
+ */
+void ESP8266_AT_RFVDD_SET(UART_HandleTypeDef *uart, uint8_t VD33, uint8_t timeout);
+
+/*
+ * @brief Execute RF TX Power According to VDD33. Automatically sets
+ * the RF TX Power. TOUT pin has to be suspended in order to measure
+ * VDD33.
+ * @returns OK
+ */
+void ESP8266_AT_RFVDD_EXECUTRE(UART_HandleTypeDef *uart, uint8_t timeout);
+
+/*
+ * @brief Checks the Remaining Space of RAM
+ * @returns +SYSRAM:<remaining RAM size>, OK
+ */
+void ESP8266_AT_SYSRAM(UART_HandleTypeDef *uart, uint8_t timeout);
+
+/*
+ * @brief Checks the Value of ADC.
+ * @returns +SYSADC:<ADC>, OK
+ */
+void ESP8266_AT_SYSADC(UART_HandleTypeDef *uart, uint8_t timeout);
+
+/*
+ * @brief Configures IO Working Mode. Please refer to ESP8266 Pin List
+ * for uses of AT+SYSIO-related commands at
+ * https://www.espressif.com/en/support/documents/technical-documents?keys=ESP8266+Pin+List
+ * @param <pin>. number of an IO pin
+ * @param <mode>. the working mode of the IO pin
+ * @param <pull-up>. true: enable the pull-up of the IO pin.
+ * false: disable the pull up
+ * @returns OK
+ */
+void ESP8266_AT_SYSIOSETCFG(UART_HandleTypeDef *uart, uint8_t pin,
+                            uint8_t mode, bool pull_up, uint8_t timeout);
+
+/*
+ * @brief Checks the Working Modes of IO Pins. Please refer to ESP8266
+ * Pin List for uses of AT+SYSIO-related commands at
+ * https://www.espressif.com/en/support/documents/technical-documents?keys=ESP8266+Pin+List
+ * @param <pin>. pin number
+ * @returns +SYSIOGETCFG:<pin>,<mode>,<pull-up>, OK
+ */
+void ESP8266_AT_SYSIOGETCFG(UART_HandleTypeDef *uart, uint8_t pin, uint8_t timeout);
+
+/*
+ * @brief Configures the Direction of a GPIO. Please refer to ESP8266
+ * Pin List for uses of AT+SYSIO-related commands at
+ * https://www.espressif.com/en/support/documents/technical-documents?keys=ESP8266+Pin+List
+ * @param <pin>: GPIO pin number
+ * @param <dir>: true: set GPIO to output. false: set GPIO to input
+ * @returns on success: OK. on failure: NOT	GPIO MODE! ERROR
+ */
+void ESP8266_AT_SYSGPIODIR(UART_HandleTypeDef *uart, uint8_t pin,
+                           bool dir, uint8_t timeout);
+/*
+ * @brief Configures the Direction of a GPIO. Please refer to ESP8266
+ * Pin List for uses of AT+SYSIO-related commands at
+ * https://www.espressif.com/en/support/documents/technical-documents?keys=ESP8266+Pin+List
+ * @param <pin>: GPIO pin number
+ * @param <level>: true: set high. false: set low
+ * @returns on success: OK. on failure: NOT	GPIO MODE! ERROR
+ */
+void ESP8266_AT_SYSGPIOWRITE(UART_HandleTypeDef *uart, uint8_t pin,
+                             bool level, uint8_t timeout);
+
+/*
+ * @brief Reads the GPIO Input Level. Please refer to ESP8266 Pin List
+ * for uses of AT+SYSIO-related commands at
+ * https://www.espressif.com/en/support/documents/technical-documents?keys=ESP8266+Pin+List
+ * @param <pin>: GPIO pin number
+ * @returns on success: +SYSGPIOREAD:<pin>,<dir>,<level>, OK.
+ * on failure: NOT GPIO MODE! ERROR
+ */
+void ESP8266_AT_SYSGPIOREAD(UART_HandleTypeDef *uart, uint8_t pin, uint8_t timeout);
+
+/*
+ * @brief Set Current System Messages. The configuration changes will
+ * NOT be saved in the flash.
+ * @param set_quit_message. true: when quitting WiFi-UART passthrough
+ * transmission, it will prompt themessage +QUITT. false: there is no
+ * message when quitting WiFi-UART passthrough transmission
+ * @param set_establish_message. true: when establishing a network
+ * connection, it will prompt the message +LINK_CONN:<status_type>,
+ * <link_id>,"UDP/TCP/SSL",<c/s>,<remote_ip>,<remote_port>,<local_port>.
+ * <status_type> : 0 - the connection is established successfully;
+ * 1 -fail to establish the connection
+ * <c/s> : 0 - the ESP works as a client; 1 - the ESP works as a server
+ * false: when a network connection is established, it will prompt the
+ * message <Link_ID>,CONNECT.
+ * @returns OK
+ */
+void ESP8266_AT_SYSMSG_CUR(UART_HandleTypeDef *uart,
+                           bool set_quit_message,
+                           bool set_establish_message, uint8_t timeout);
+
+/*
+ * @brief Set Default System Messages. The configuration changes will
+ * be saved in the flash user parameter area.
+ * @param set_quit_message. true: when quitting WiFi-UART passthrough
+ * transmission, it will prompt themessage +QUITT. false: there is no
+ * message when quitting WiFi-UART passthrough transmission
+ * @param set_establish_message. true: when establishing a network
+ * connection, it will prompt the message +LINK_CONN:<status_type>,
+ * <link_id>,"UDP/TCP/SSL",<c/s>,<remote_ip>,<remote_port>,<local_port>.
+ * <status_type> : 0 - the connection is established successfully;
+ * 1 -fail to establish the connection
+ * <c/s> : 0 - the ESP works as a client; 1 - the ESP works as a server
+ * false: when a network connection is established, it will prompt the
+ * message <Link_ID>,CONNECT.
+ * @returns OK
+ */
+void ESP8266_AT_SYSMSG_DEF(UART_HandleTypeDef *uart,
+                           bool set_quit_message,
+                           bool set_establish_message, uint8_t timeout);
 
 // Wi-Fi AT Commands
 
-// void ESP8266_AT_CWMODE_CUR();
-// void ESP8266_AT_CWMODE_DEF();
-// void ESP8266_AT_CWJAP_CUR();
-// void ESP8266_AT_CWJAP_DEF();
-// void ESP8266_AT_CWLAPOPT();
-// void ESP8266_AT_CWLAP();
-// void ESP8266_AT_CWQAP();
-// void ESP8266_AT_CWSAP_CUR();
-// void ESP8266_AT_CWSAP_DEF();
-// void ESP8266_AT_CWLIF();
-// void ESP8266_AT_CWDHCP_CUR();
-// void ESP8266_AT_CWDHCP_DEF();
-// void ESP8266_AT_CWDHCPS_CUR();
-// void ESP8266_AT_CWDHCPS_DEF();
-// void ESP8266_AT_CWAUTOCONN();
-// void ESP8266_AT_CIPSTAMAC_CUR();
-// void ESP8266_AT_CIPSTAMAC_DEF();
-// void ESP8266_AT_CIPAPMAC_CUR();
-// void ESP8266_AT_CIPAPMAC_DEF();
-// void ESP8266_AT_CIPSTA_CUR();
-// void ESP8266_AT_CIPSTA_DEF();
-// void ESP8266_AT_CIPAP_CUR();
-// void ESP8266_AT_CIPAP_DEF();
-// void ESP8266_AT_CWSTARTSMART();
-// void ESP8266_AT_CWSTOPSMART();
-// void ESP8266_AT_CWSTARTDISCOVER();
-// void ESP8266_AT_CWSTOPDISCOVER();
-// void ESP8266_AT_WPS();
-// void ESP8266_AT_MDNS();
-// void ESP8266_AT_CWHOSTNAME();
-// void ESP8266_AT_CWCOUNTRY_CUR();
-// void ESP8266_AT_CWCOUNTRY_DEF();
+// void ESP8266_AT_CWMODE_CUR(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CWMODE_DEF(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CWJAP_CUR(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CWJAP_DEF(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CWLAPOPT(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CWLAP(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CWQAP(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CWSAP_CUR(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CWSAP_DEF(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CWLIF(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CWDHCP_CUR(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CWDHCP_DEF(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CWDHCPS_CUR(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CWDHCPS_DEF(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CWAUTOCONN(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CIPSTAMAC_CUR(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CIPSTAMAC_DEF(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CIPAPMAC_CUR(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CIPAPMAC_DEF(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CIPSTA_CUR(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CIPSTA_DEF(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CIPAP_CUR(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CIPAP_DEF(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CWSTARTSMART(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CWSTOPSMART(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CWSTARTDISCOVER(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CWSTOPDISCOVER(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_WPS(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_MDNS(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CWHOSTNAME(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CWCOUNTRY_CUR(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CWCOUNTRY_DEF(UART_HandleTypeDef *uart, uint8_t timeout);
 
 // TCP/IP-Related AT Commands
 
-// void ESP8266_AT_CIPSTATUS();
-// void ESP8266_AT_CIPDOMAIN();
-// void ESP8266_AT_CIPSTART();
-// void ESP8266_AT_CIPSSLSIZE();
-// void ESP8266_AT_CIPSSLCONF();
-// void ESP8266_AT_CIPSEND();
-// void ESP8266_AT_CIPSENDEX();
-// void ESP8266_AT_CIPSENDBUF();
-// void ESP8266_AT_CIPBUFRESET();
-// void ESP8266_AT_CIPBUFSTATUS();
-// void ESP8266_AT_CIPCHECKSEQ();
-// void ESP8266_AT_CIPCLOSE();
-// void ESP8266_AT_CIFSR();
-// void ESP8266_AT_CIPMUX();
-// void ESP8266_AT_CIPSERVER();
-// void ESP8266_AT_CIPSERVERMAXCONN();
-// void ESP8266_AT_CIPMODE();
-// void ESP8266_AT_SAVETRANSLINK();
-// void ESP8266_AT_CIPSTO();
-// void ESP8266_AT_PING();
-// void ESP8266_AT_CIUPDATE();
-// void ESP8266_AT_CIPDINFO();
-// void ESP8266_IPD();
-// void ESP8266_AT_CIPRECVMODE();
-// void ESP8266_AT_CIPRECVDATA();
-// void ESP8266_AT_CIPRECVLEN();
-// void ESP8266_AT_CIPSNTPCFG();
-// void ESP8266_AT_CIPSNTPTIME();
-// void ESP8266_AT_CIPDNS_CUR();
-// void ESP8266_AT_CIPDNS_DEF();
+// void ESP8266_AT_CIPSTATUS(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CIPDOMAIN(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CIPSTART(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CIPSSLSIZE(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CIPSSLCONF(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CIPSEND(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CIPSENDEX(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CIPSENDBUF(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CIPBUFRESET(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CIPBUFSTATUS(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CIPCHECKSEQ(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CIPCLOSE(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CIFSR(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CIPMUX(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CIPSERVER(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CIPSERVERMAXCONN(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CIPMODE(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_SAVETRANSLINK(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CIPSTO(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_PING(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CIUPDATE(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CIPDINFO(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_IPD(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CIPRECVMODE(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CIPRECVDATA(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CIPRECVLEN(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CIPSNTPCFG(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CIPSNTPTIME(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CIPDNS_CUR(UART_HandleTypeDef *uart, uint8_t timeout);
+// void ESP8266_AT_CIPDNS_DEF(UART_HandleTypeDef *uart, uint8_t timeout);
 
 #endif
